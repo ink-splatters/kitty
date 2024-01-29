@@ -466,6 +466,9 @@ def init_env(
     vcs_rev: str = '',
 ) -> Env:
     native_optimizations = native_optimizations and not sanitize
+    # https://stackoverflow.com/questions/65966969/why-does-march-native-not-work-on-apple-m1
+    # TL;DR works as of clang 13.0.0
+    march = '' if not native_optimizations else '-mcpu=native' if is_macos and is_arm else '-march=native'
     cc, ccver = cc_version()
     if verbose:
         print('CC:', cc, ccver)
