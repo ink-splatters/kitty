@@ -551,7 +551,7 @@ set_builtin_nerd_font(PyObject UNUSED *self, PyObject *pypath) {
     builtin_nerd_font.face = face_from_path(path, 0, NULL);
     if (builtin_nerd_font.face) {
         // Copy whatever hinting settings fontconfig returns for the nerd font postscript name
-        AP(FcPatternAddString, FC_POSTSCRIPT_NAME, (const unsigned char*)postscript_name_for_face(builtin_nerd_font.face), "postscript_name");
+        AP(FcPatternAddString, FC_POSTSCRIPT_NAME, (const unsigned char*)postscript_name_for_face(builtin_nerd_font.face, NULL), "postscript_name");
         RAII_PyObject(d, _fc_match(pat));
         if (!d) goto end;
         builtin_nerd_font.descriptor = PyDict_New();
