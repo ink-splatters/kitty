@@ -58,11 +58,17 @@ in
           sphinx-copybutton
           sphinxext-opengraph
           sphinx-inline-tabs
+          sphinx-autobuild
+          matplotlib
         ]
         ++ optionals stdenv.isDarwin [
           imagemagick
           libicns # For the png2icns tool.
+        ]
+        ++ optionals stdenv.isLinux [
+          wayland-scanner
         ];
+
 
       propagatedBuildInputs = optional stdenv.isLinux libGL;
 
