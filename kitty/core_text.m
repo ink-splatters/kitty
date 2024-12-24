@@ -111,7 +111,7 @@ ct_face(CTFontRef font, PyObject *features) {
         self->path = get_path_for_font(self->ct_font);
         if (self->family_name == NULL || self->full_name == NULL || self->postscript_name == NULL || self->path == NULL) { Py_CLEAR(self); }
         else {
-            if (!create_features_for_face(postscript_name_for_face((PyObject*)self), features, &self->font_features)) { Py_CLEAR(self); }
+            if (!create_features_for_face(postscript_name_for_face((PyObject*)self, NULL), features, &self->font_features)) { Py_CLEAR(self); }
         }
     }
     return self;
@@ -1162,7 +1162,7 @@ static PyMethodDef methods[] = {
 };
 
 const char*
-postscript_name_for_face(const PyObject *face_) {
+postscript_name_for_face(const PyObject *face_, PyObject UNUSED *_args) {
     const CTFace *self = (const CTFace*)face_;
     if (self->postscript_name) return PyUnicode_AsUTF8(self->postscript_name);
     return "";
