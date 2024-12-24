@@ -338,7 +338,7 @@ face_from_descriptor(PyObject *descriptor, FONTS_DATA_HANDLE fg) {
             }
             if ((error = FT_Set_Var_Design_Coordinates(self->face, sz, coords))) return set_load_error(path, error);
         }
-        if (!create_features_for_face(postscript_name_for_face((PyObject*)self), PyDict_GetItemString(descriptor, "features"), &self->font_features)) return NULL;
+        if (!create_features_for_face(postscript_name_for_face((PyObject*)self, NULL), PyDict_GetItemString(descriptor, "features"), &self->font_features)) return NULL;
     }
     Py_XINCREF(retval);
     return retval;
@@ -429,7 +429,7 @@ repr(Face *self) {
 }
 
 const char*
-postscript_name_for_face(const PyObject *face_) {
+postscript_name_for_face(const PyObject *face_, PyObject *_args UNUSED) {
     const Face *self = (const Face*)face_;
     const char *ps_name = FT_Get_Postscript_Name(self->face);
     return ps_name ? ps_name : "";

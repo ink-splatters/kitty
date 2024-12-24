@@ -1157,7 +1157,7 @@ static PyMethodDef methods[] = {
 };
 
 const char*
-postscript_name_for_face(const PyObject *face_, PyObject UNUSED *_args) {
+postscript_name_for_face(const PyObject *face_, PyObject *_args UNUSED) {
     const CTFace *self = (const CTFace*)face_;
     if (self->postscript_name) return PyUnicode_AsUTF8(self->postscript_name);
     return "";
