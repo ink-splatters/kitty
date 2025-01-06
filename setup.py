@@ -200,6 +200,7 @@ class Options:
     systemd_library: Optional[str] = os.getenv('KITTY_SYSTEMD_LIBRARY')
     fontconfig_library: Optional[str] = os.getenv('KITTY_FONTCONFIG_LIBRARY')
     building_arch: str = ''
+    disable_hardening: bool = False
 
     # Extras
     compilation_database: CompilationDatabase = CompilationDatabase()
@@ -469,13 +470,16 @@ def init_env(
     building_arch: str = '',
     extra_library_dirs: Iterable[str] = (),
     verbose: bool = True,
+    disable_hardening: bool = False,
     vcs_rev: str = '',
 ) -> Env:
     native_optimizations = native_optimizations and not sanitize
     cc, ccver = cc_version()
     if verbose:
         print('CC:', cc, ccver)
-    stack_protector = first_successful_compile(cc, '-fstack-protector-strong', '-fstack-protector')
+        print(f"Hardening: {'disabled' if disable_hardening else 'enabled'}")
+
+    stack_protector = '' if disable_hardening else first_successful_compile(cc, '-fstack-protector-strong', '-fstack-protector')
     missing_braces = ''
     if ccver < (5, 2):
         missing_braces = '-Wno-missing-braces'
@@ -484,7 +488,7 @@ def init_env(
     if ccver >= (5, 0):
         df += ' -Og'
         float_conversion = '-Wfloat-conversion'
-    fortify_source = '' if sanitize and is_macos else '-D_FORTIFY_SOURCE=2'
+    fortify_source = '' if disable_hardening or sanitize and is_macos else '-D_FORTIFY_SOURCE=2'
     optimize = df if debug or sanitize else '-O3'
     sanitize_args = get_sanitize_args(cc, ccver) if sanitize else []
     cppflags_ = os.environ.get(
@@ -575,17 +579,18 @@ def init_env(
     if ba.isa not in (ISA.AMD64, ISA.X86, ISA.ARM64):
         cppflags.append('-DKITTY_NO_SIMD')
 
-    control_flow_protection = ''
-    if ba.isa == ISA.AMD64:
-        control_flow_protection = '-fcf-protection=full' if ccver >= (9, 0) else ''
-    elif ba.isa == ISA.ARM64:
-        # Using -mbranch-protection=standard causes crashes on Linux ARM, reported
-        # in https://github.com/kovidgoyal/kitty/issues/6845#issuecomment-1835886938
-        if is_macos:
-            control_flow_protection = '-mbranch-protection=standard'
+    if not disable_hardening:
+        control_flow_protection = ''
+        if ba.isa == ISA.AMD64:
+            control_flow_protection = '-fcf-protection=full' if ccver >= (9, 0) else ''
+        elif ba.isa == ISA.ARM64:
+            # Using -mbranch-protection=standard causes crashes on Linux ARM, reported
+            # in https://github.com/kovidgoyal/kitty/issues/6845#issuecomment-1835886938
+            if is_macos:
+                control_flow_protection = '-mbranch-protection=standard'
 
-    if control_flow_protection:
-        cflags.append(control_flow_protection)
+        if control_flow_protection:
+            cflags.append(control_flow_protection)
 
     if native_optimizations and ba.isa in (ISA.AMD64, ISA.X86):
         cflags.extend('-march=native -mtune=native'.split())
@@ -1041,7 +1046,8 @@ def init_env_from_args(args: Options, native_optimizations: bool = False) -> Non
         args.debug, args.sanitize, native_optimizations, args.link_time_optimization, args.profile,
         args.egl_library, args.startup_notification_library, args.canberra_library, args.systemd_library, args.fontconfig_library,
         args.extra_logging, args.extra_include_dirs, args.ignore_compiler_warnings,
-        args.building_arch, args.extra_library_dirs, verbose=args.verbose > 0, vcs_rev=args.vcs_rev,
+        args.building_arch, args.extra_library_dirs, verbose=args.verbose > 0, disable_hardening=args.disable_hardening,
+        vcs_rev=args.vcs_rev
     )
 
 
@@ -2054,6 +2060,15 @@ def option_parser() -> argparse.ArgumentParser:  # {{{
         default=Options.build_dsym, action='store_true',
         help='Build the dSYM bundle on macOS, ignored on other platforms'
     )
+
+    p.add_argument(
+        '--disable-hardening',
+        dest='disable_hardening',
+        default=Options.disable_hardening,
+        action='store_true',
+        help='Do not pass any hardening compilation flags.'
+    )
+
     return p
 # }}}
 
