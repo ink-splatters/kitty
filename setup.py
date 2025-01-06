@@ -1757,7 +1757,7 @@ def create_macos_app_icon(where: str = 'Resources') -> None:
     icns_dir = os.path.join(where, f'{appname}.icns')
     try:
         subprocess.check_call([
-            'iconutil', '-c', 'icns', iconset_dir, '-o', icns_dir
+            '/usr/bin/iconutil', '-c', 'icns', iconset_dir, '-o', icns_dir
         ])
     except FileNotFoundError:
         print(f'{error("iconutil not found")}, using png2icns (without retina support) to convert the logo', file=sys.stderr)
