@@ -1,6 +1,5 @@
 {pkgs ? import <nixpkgs> {}}:
 with pkgs; let
-  inherit (lib) optional optionals;
   inherit (xorg) libX11 libXrandr libXinerama libXcursor libXi libXext;
   inherit (darwin.apple_sdk.frameworks) Cocoa CoreGraphics Foundation IOKit Kernel OpenGL UniformTypeIdentifiers;
   harfbuzzWithCoreText = harfbuzz.override {withCoreText = stdenv.isDarwin;};
@@ -16,7 +15,7 @@ in
           simde
           go_1_23
         ]
-        ++ optionals stdenv.isDarwin [
+        ++ lib.optionals stdenv.isDarwin [
           Cocoa
           CoreGraphics
           Foundation
@@ -31,7 +30,7 @@ in
         ++ lib.optionals (stdenv.isDarwin && (builtins.hasAttr "UserNotifications" darwin.apple_sdk.frameworks)) [
           darwin.apple_sdk.frameworks.UserNotifications
         ]
-        ++ optionals stdenv.isLinux [
+        ++ lib.optionals stdenv.isLinux [
           fontconfig
           libunistring
           libcanberra
@@ -61,11 +60,11 @@ in
           sphinx-autobuild
           matplotlib
         ]
-        ++ optionals stdenv.isDarwin [
+        ++ lib.optionals stdenv.isDarwin [
           imagemagick
           libicns # For the png2icns tool.
         ]
-        ++ optionals stdenv.isLinux [
+        ++ lib.optionals stdenv.isLinux [
           wayland-scanner
         ];
 
@@ -75,15 +74,10 @@ in
         pillow
       ];
 
-      # Causes build failure due to warning when using Clang
-      hardeningDisable = ["strictoverflow"];
+      # Configure hardening options using kitty setup.py CLI
+      hardeningDisable = ["all"];
 
-      shellHook =
-        if stdenv.isDarwin
-        then ''
-          export KITTY_NO_LTO=
-        ''
-        else ''
+      shellHook = lib.optionalString stdenv.isLinux ''
           export KITTY_EGL_LIBRARY='${lib.getLib libGL}/lib/libEGL.so.1'
           export KITTY_STARTUP_NOTIFICATION_LIBRARY='${libstartup_notification}/lib/libstartup-notification-1.so'
           export KITTY_CANBERRA_LIBRARY='${libcanberra}/lib/libcanberra.so'
