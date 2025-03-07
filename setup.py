@@ -618,7 +618,7 @@ def init_env(
         if control_flow_protection:
             cflags.append(control_flow_protection)
 
-    if native_optimizations and ba.isa in (ISA.AMD64, ISA.X86):
+    if native_optimizations and ba.isa in (ISA.AMD64, ISA.X86, ISA.ARM64):
         cflags.extend('-march=native -mtune=native'.split())
 
     ans = Env(
