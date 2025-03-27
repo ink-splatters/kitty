@@ -1,11 +1,11 @@
 {pkgs ? import <nixpkgs> {}}:
 with pkgs; let
   inherit (xorg) libX11 libXrandr libXinerama libXcursor libXi libXext;
-  inherit (darwin.apple_sdk.frameworks) Cocoa CoreGraphics Foundation IOKit Kernel OpenGL UniformTypeIdentifiers;
   harfbuzzWithCoreText = harfbuzz.override {withCoreText = stdenv.isDarwin;};
+  inherit (llvmPackages_latest) stdenv clang bintools;
 in
   with python3Packages;
-    mkShell rec {
+    mkShell.override {inherit stdenv;} rec {
       buildInputs =
         [
           harfbuzzWithCoreText
@@ -13,22 +13,13 @@ in
           lcms2
           xxHash
           simde
-          go_1_23
+          go_1_24
         ]
         ++ lib.optionals stdenv.isDarwin [
-          Cocoa
-          CoreGraphics
-          Foundation
-          IOKit
-          Kernel
-          OpenGL
-          UniformTypeIdentifiers
+          apple-sdk_15
           libpng
           python3
           zlib
-        ]
-        ++ lib.optionals (stdenv.isDarwin && (builtins.hasAttr "UserNotifications" darwin.apple_sdk.frameworks)) [
-          darwin.apple_sdk.frameworks.UserNotifications
         ]
         ++ lib.optionals stdenv.isLinux [
           fontconfig
@@ -59,6 +50,8 @@ in
           sphinx-inline-tabs
           sphinx-autobuild
           matplotlib
+          clang
+          bintools
         ]
         ++ lib.optionals stdenv.isDarwin [
           imagemagick
@@ -68,7 +61,7 @@ in
           wayland-scanner
         ];
 
-      propagatedBuildInputs = optional stdenv.isLinux libGL;
+      propagatedBuildInputs = lib.optional stdenv.isLinux libGL;
 
       checkInputs = [
         pillow
@@ -78,8 +71,10 @@ in
       hardeningDisable = ["all"];
 
       shellHook = lib.optionalString stdenv.isLinux ''
-          export KITTY_EGL_LIBRARY='${lib.getLib libGL}/lib/libEGL.so.1'
-          export KITTY_STARTUP_NOTIFICATION_LIBRARY='${libstartup_notification}/lib/libstartup-notification-1.so'
-          export KITTY_CANBERRA_LIBRARY='${libcanberra}/lib/libcanberra.so'
-        '';
+        export CC=clang
+        export CXX=clang++
+        export KITTY_EGL_LIBRARY='${lib.getLib libGL}/lib/libEGL.so.1'
+        export KITTY_STARTUP_NOTIFICATION_LIBRARY='${libstartup_notification}/lib/libstartup-notification-1.so'
+        export KITTY_CANBERRA_LIBRARY='${libcanberra}/lib/libcanberra.so'
+      '';
     }
