@@ -509,7 +509,8 @@ def init_env(
         'OVERRIDE_CFLAGS', (
             f'-Wextra {float_conversion} -Wno-missing-field-initializers -Wall -Wstrict-prototypes {std}'
             f' {werror} {optimize} {sanitize_flag} -fwrapv {stack_protector} {missing_braces}'
-            f' -pipe -fvisibility=hidden -fno-plt'
+            # produces "error: argument unused during compilation" on clang 20.0+, but only on macOS
+            f' -fno-plt' if ccver < (20,0) or not is_macos else ''
         )
     )
     cflags = shlex.split(cflags_) + shlex.split(
