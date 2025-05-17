@@ -1,12 +1,12 @@
 {pkgs ? import <nixpkgs> {}}:
 with pkgs; let
-  inherit (lib) optional optionals;
+  inherit (lib) optional optionals optionalString;
   inherit (xorg) libX11 libXrandr libXinerama libXcursor libXi libXext;
-  inherit (darwin.apple_sdk.frameworks) Cocoa CoreGraphics Foundation IOKit Kernel OpenGL UniformTypeIdentifiers;
   harfbuzzWithCoreText = harfbuzz.override {withCoreText = stdenv.isDarwin;};
+  inherit (llvmPackages_latest) clang bintools stdenv;
 in
   with python3Packages;
-    mkShell rec {
+    mkShell.override {inherit stdenv;} rec {
       buildInputs =
         [
           harfbuzzWithCoreText
@@ -14,22 +14,13 @@ in
           lcms2
           xxHash
           simde
-          go_1_23
+          go_1_24
           matplotlib
         ]
         ++ optionals stdenv.isDarwin [
-          Cocoa
-          CoreGraphics
-          Foundation
-          IOKit
-          Kernel
-          OpenGL
-          UniformTypeIdentifiers
+          apple-sdk_15
           libpng
           zlib
-        ]
-        ++ lib.optionals (stdenv.isDarwin && (builtins.hasAttr "UserNotifications" darwin.apple_sdk.frameworks)) [
-          darwin.apple_sdk.frameworks.UserNotifications
         ]
         ++ optionals stdenv.isLinux [
           fontconfig
@@ -55,6 +46,8 @@ in
 
       nativeBuildInputs =
         [
+          clang
+          bintools
           ncurses
           pkg-config
           sphinx
@@ -62,6 +55,7 @@ in
           sphinx-copybutton
           sphinxext-opengraph
           sphinx-inline-tabs
+          sphinx-autobuild
         ]
         ++ optionals stdenv.isDarwin [
           imagemagick
@@ -74,24 +68,19 @@ in
         pillow
       ];
 
-      # Causes build failure due to warning when using Clang
-      hardeningDisable = ["strictoverflow"];
+      # Hardening control moved to setup.py
+      hardeningDisable = ["all"];
 
       shellHook = ''
         # Add fonts by hand
         if [ ! -e ./fonts/SymbolsNerdFontMono-Regular.ttf ]; then
+          mkdir fonts
           cp "${nerd-fonts.symbols-only}/share/fonts/truetype/NerdFonts/Symbols/SymbolsNerdFontMono-Regular.ttf" ./fonts/
         fi
-        '' +  (
-          if stdenv.isDarwin
-          then ''
-            export KITTY_NO_LTO=
-          ''
-          else ''
-            export KITTY_EGL_LIBRARY='${lib.getLib libGL}/lib/libEGL.so.1'
-            export KITTY_STARTUP_NOTIFICATION_LIBRARY='${libstartup_notification}/lib/libstartup-notification-1.so'
-            export KITTY_CANBERRA_LIBRARY='${libcanberra}/lib/libcanberra.so'
-            export KITTY_FONTCONFIG_LIBRARY='${fontconfig.lib}/lib/libfontconfig.so'
-          ''
-        );
+        '' + optionalString stdenv.isLinux ''
+          export KITTY_EGL_LIBRARY='${lib.getLib libGL}/lib/libEGL.so.1'
+          export KITTY_STARTUP_NOTIFICATION_LIBRARY='${libstartup_notification}/lib/libstartup-notification-1.so'
+          export KITTY_CANBERRA_LIBRARY='${libcanberra}/lib/libcanberra.so'
+          export KITTY_FONTCONFIG_LIBRARY='${fontconfig.lib}/lib/libfontconfig.so'
+        '';
     }
