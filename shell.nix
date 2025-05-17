@@ -1,12 +1,12 @@
 {pkgs ? import <nixpkgs> {}}:
 with pkgs; let
-  inherit (lib) optional optionals;
+  inherit (lib) optional optionals optionalString;
   inherit (xorg) libX11 libXrandr libXinerama libXcursor libXi libXext;
-  inherit (darwin.apple_sdk.frameworks) Cocoa CoreGraphics Foundation IOKit Kernel OpenGL UniformTypeIdentifiers;
   harfbuzzWithCoreText = harfbuzz.override {withCoreText = stdenv.isDarwin;};
+  inherit (llvmPackages_latest) clang bintools stdenv;
 in
   with python3Packages;
-    mkShell rec {
+    mkShell.override {inherit stdenv;} rec {
       buildInputs =
         [
           harfbuzzWithCoreText
@@ -18,18 +18,9 @@ in
           matplotlib
         ]
         ++ optionals stdenv.isDarwin [
-          Cocoa
-          CoreGraphics
-          Foundation
-          IOKit
-          Kernel
-          OpenGL
-          UniformTypeIdentifiers
+          apple-sdk_15
           libpng
           zlib
-        ]
-        ++ lib.optionals (stdenv.isDarwin && (builtins.hasAttr "UserNotifications" darwin.apple_sdk.frameworks)) [
-          darwin.apple_sdk.frameworks.UserNotifications
         ]
         ++ optionals stdenv.isLinux [
           fontconfig
@@ -55,6 +46,8 @@ in
 
       nativeBuildInputs =
         [
+          clang
+          bintools
           ncurses
           pkg-config
           sphinx
@@ -62,6 +55,7 @@ in
           sphinx-copybutton
           sphinxext-opengraph
           sphinx-inline-tabs
+          sphinx-autobuild
         ]
         ++ optionals stdenv.isDarwin [
           imagemagick
@@ -74,8 +68,8 @@ in
         pillow
       ];
 
-      # Causes build failure due to warning when using Clang
-      hardeningDisable = ["strictoverflow"];
+      # Hardening control moved to setup.py
+      hardeningDisable = ["all"];
 
       shellHook =
         if stdenv.isDarwin
